@@ -1,0 +1,7 @@
+project = repro_install_headers
+
+using version
+using config
+using test
+using install
+using dist
