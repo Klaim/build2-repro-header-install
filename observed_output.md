@@ -153,3 +153,51 @@ In this case all headers are installed.
 
 So this is not a real problem, though I wanted to point it because it might not be obvious at first attempt to express this.
 
+5. Install a header with the wrong extension (required by lua)
+--------------------------------------------------------------
+
+Now we want to be able to install a file that is not part of the build.
+As we know (see 4.), if we don't require that header, it will not be installed.
+
+    lib{repro} : hxx{someapi.hpp}
+
+This works as expected: the file is installed. However we didn't want to make this file available to the library compilation. Alternatively:
+
+    lib{repro} : file{someapi.hpp}
+
+However:
+
+    > b install config.install.root=../install/repro/
+    install manifest{manifest}@..\build-repro\repro_install_headers\
+    install hxx{public}@..\build-repro\repro_install_headers\
+    install hxx{private}@..\build-repro\repro_install_headers\
+    install ..\build-repro\repro_install_headers\pca{repro}
+    install ..\build-repro\repro_install_headers\pcs{repro}
+
+`someapi.hpp` is not installed at all.
+Assuming it's the default behavior for `file` target, we add:
+
+    lib{repro} : file{someapi.hpp}
+    file{someapi.hpp} : install = true
+
+Then:
+
+    > b
+    error: no rule to update ..\build-repro\repro_install_headers\file{someapi.hpp}
+    info: re-run with --verbose 4 for more information
+    info: while applying rule cxx.link to update ..\build-repro\repro_install_headers\libs{repro}
+    info: while applying rule bin.lib to update ..\build-repro\repro_install_headers\lib{repro}
+    info: while applying rule alias to update ..\build-repro\dir{repro_install_headers\}
+    info: failed to update ..\build-repro\dir{repro_install_headers\}
+
+    > b install config.install.root=../install/repro/
+    error: no rule to update (for install) ..\build-repro\repro_install_headers\file{someapi.hpp}
+    info: re-run with --verbose 4 for more information
+    info: while applying rule install.file to update (for install) ..\build-repro\repro_install_headers\file{someapi.hpp}
+    info: while applying rule cxx.install to update (for install) ..\build-repro\repro_install_headers\liba{repro}
+    info: while applying rule bin.lib to update (for install) ..\build-repro\repro_install_headers\lib{repro}
+    info: while applying rule install.alias to update (for install) ..\build-repro\dir{repro_install_headers\}
+    info: failed to update (for install) ..\build-repro\dir{repro_install_headers\}
+
+
+This seems to be just a variant of the previous issues.

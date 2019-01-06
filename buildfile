@@ -27,3 +27,11 @@ lib{repro} : hxx{public private}
 #
 # hxx{foruseronly} : install = true
 # 
+
+#########
+# Case 5
+#
+# lib{repro} : file{someapi.hpp}
+# file{someapi.hpp} : install = include/
+# 
+
