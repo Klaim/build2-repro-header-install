@@ -9,8 +9,11 @@ Observed Output:
     Copyright (c) 2014-2018 Code Synthesis Ltd
     This is free software released under the MIT license.
 
-0. Just the library
--------------------1
+Note that between each case, we remove the previous case's modification and use `b clean`.
+All the modifications are relative to situation 0 (which is what you get if you clone this repository).
+
+0 - Library definition (common part)
+------------------------------------
 
 `buildfile` is only 2 lines:
 
@@ -32,8 +35,8 @@ There is also a `foruseronly.hxx` header for a later test.
 
 Both `public.hxx` and `private.hxx` headers are installed, as expected.
 
-1. Don't install the private header
------------------------------------
+1 - Don't install the private header
+------------------------------------
 
 We add this line to the buildfile:
 
@@ -55,15 +58,16 @@ Then try to build and install:
     install ..\build-repro\repro_install_headers\pca{repro}
     install ..\build-repro\repro_install_headers\pcs{repro}
 
-As expected, `b install` will not install the private header.
+As expected, `b install` will not install `private.hxx`, only `public.hxx`.
 However we get a weird error when building.
+Note also that apparently, updating was not part of installing, which might be a different bug.
 
-2. Explicitely state that publich header should be installed
-------------------------------------------------------------
+2 - Explicitely state that publich header should be installed
+-------------------------------------------------------------
 
-We remove the previous test's line and start again (with `b clean`) this time with:
+We remove the previous test's line and start again this time with:
 
-    hxx{public} : install = true
+    hxx{public} : install = include/repro/
 
 This is redundant with the default because we already made this header a requirement of the library, which implies that this header is installed by default.
 
@@ -84,14 +88,14 @@ This is redundant with the default because we already made this header a require
     info: while applying rule install.alias to update (for install) ..\build-repro\dir{repro_install_headers\}
     info: failed to update (for install) ..\build-repro\dir{repro_install_headers\}
 
-Explicitely stating that a header should be installed seems to trigger this error, which seems out of place.
+Explicitely stating that a header should be installed seems to trigger this error.
 
-3. Explicitely state which header to publish or not
----------------------------------------------------
+3 - Explicitely state which header to publish or not
+----------------------------------------------------
 
 This time we try with a combination, that matches my initial attempt at making some headers public and some other headers private explicitely:
 
-    hxx{public} : install = true
+    hxx{public} : install = include/repro/
     hxx{private} : install = false
 
 Then:
@@ -118,14 +122,14 @@ Then:
     info: while applying rule install.alias to update (for install) ..\build-repro\dir{repro_install_headers\}
     info: failed to update (for install) ..\build-repro\dir{repro_install_headers\}
 
-Both operation fails, but the install seems to fail only for the public header.
+Both operation fails, but the install seems to fail only for the public header. This matches previous cases.
 
-4. Install a header that should only be used by the user
---------------------------------------------------------
+4 - Install a header that should only be used by the user
+---------------------------------------------------------
 
 This time we keep the default (all headers published, situation 0) but want to add a header to the install, without it being available to build the library (some libraries does that, though it's not always an issue to add these headers to the library requirements):
 
-    hxx{foruseronly} : install = true
+    hxx{foruseronly} : install = include/repro/
 
 Then:
 
@@ -153,32 +157,20 @@ In this case all headers are installed.
 
 So this is not a real problem, though I wanted to point it because it might not be obvious at first attempt to express this.
 
-5. Install a header with the wrong extension (required by lua)
---------------------------------------------------------------
+5 - Install a header with a different extension
+-----------------------------------------------
 
+This is required by projects like Lua for example.
 Now we want to be able to install a file that is not part of the build.
 As we know (see 4.), if we don't require that header, it will not be installed.
 
     lib{repro} : hxx{someapi.hpp}
 
-This works as expected: the file is installed. However we didn't want to make this file available to the library compilation. Alternatively:
+This works as expected: the file is installed as a header. However we didn't want to make this file available to the library compilation.
+Alternatively:
 
     lib{repro} : file{someapi.hpp}
-
-However:
-
-    > b install config.install.root=../install/repro/
-    install manifest{manifest}@..\build-repro\repro_install_headers\
-    install hxx{public}@..\build-repro\repro_install_headers\
-    install hxx{private}@..\build-repro\repro_install_headers\
-    install ..\build-repro\repro_install_headers\pca{repro}
-    install ..\build-repro\repro_install_headers\pcs{repro}
-
-`someapi.hpp` is not installed at all.
-Assuming it's the default behavior for `file` target, we add:
-
-    lib{repro} : file{someapi.hpp}
-    file{someapi.hpp} : install = true
+    file{someapi.hpp} : install = include/repro/
 
 Then:
 
@@ -201,3 +193,29 @@ Then:
 
 
 This seems to be just a variant of the previous issues.
+
+
+6 - Install a header with the wrong extension (required by lua) - Take 2
+------------------------------------------------------------------------
+
+My first attempts actually were sligthly more sophisticated but still failing and here is an example:
+
+Let's asssume that we want `someapi.hpp` installed but express it as in the requirements of the library.
+
+    lib{repro} : file{someapi.hpp}
+    lib{repro} : file{someapi.hpp} : install = include/repro/
+
+Then:
+
+    > b
+    info: ..\build-repro\dir{repro_install_headers\} is up to date
+
+    > b install config.install.root=../install/repro/
+    install manifest{manifest}@..\build-repro\repro_install_headers\
+    install hxx{public}@..\build-repro\repro_install_headers\
+    install hxx{private}@..\build-repro\repro_install_headers\
+    install ..\build-repro\repro_install_headers\pca{repro}
+    install ..\build-repro\repro_install_headers\pcs{repro}
+
+
+No error, but `someapi.hpp` not installed.

@@ -6,7 +6,7 @@ lib{repro} : hxx{public private}
 #########
 # Case 1
 #
-hxx{private} : install = false
+# hxx{private} : install = false
 #
 
 #########
@@ -34,4 +34,13 @@ hxx{private} : install = false
 # lib{repro} : file{someapi.hpp}
 # file{someapi.hpp} : install = include/repro/
 # 
+
+#########
+# Case 6
+#
+# lib{repro} : file{someapi.hpp}
+# lib{repro} : file{someapi.hpp} : install = include/repro/
+# 
+
+
 
